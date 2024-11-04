@@ -23,11 +23,20 @@ function App() {
       <Scene />
       <main>
         <div className="frame">
-          <h1 className="frame__title">Revealing <br/>WebGL Images</h1>
-          <a className="frame__back" href="https://tympanus.net/codrops/?p=75561">
+          <h1 className="frame__title">
+            Revealing <br />
+            WebGL Images
+          </h1>
+          <a
+            className="frame__back"
+            href="https://tympanus.net/codrops/?p=75561"
+          >
             Back to the article
           </a>
-          <a className="frame__prev" href="https://tympanus.net/Development/StickySections/">
+          <a
+            className="frame__prev"
+            href="https://tympanus.net/Development/StickySections/"
+          >
             Previous demo
           </a>
           <nav className="frame__demos">
@@ -37,18 +46,6 @@ function App() {
               onClick={() => setType(0)}
             >
               1
-            </a>
-            <a className="frame__demos-item" onClick={() => setType(1)}>
-              2
-            </a>
-            <a className="frame__demos-item" onClick={() => setType(2)}>
-              3
-            </a>
-            <a className="frame__demos-item" onClick={() => setType(3)}>
-              4
-            </a>
-            <a className="frame__demos-item" onClick={() => setType(4)}>
-              5
             </a>
           </nav>
         </div>
@@ -282,7 +279,8 @@ function App() {
           </div>
         </section>
         <p className="credits">
-          Made by <a href="https://twitter.com/akella">@akella</a> for <a href="https://twitter.com/codrops">@codrops</a>
+          Made by <a href="https://twitter.com/akella">@akella</a> for{" "}
+          <a href="https://twitter.com/codrops">@codrops</a>
         </p>
       </main>
     </>
