@@ -1,11 +1,9 @@
-import EmergeMaterial from "../stuff/EmergeMaterial";
 import { useState, useEffect, useRef } from "react";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
-import { useLayoutEffect } from "react";
+import { motion, useMotionValue, useSpring } from "framer-motion";
 import * as THREE from "three";
-import useScreenSize from "../stuff/useScreenSize";
 import { View } from "@react-three/drei";
+import useScreenSize from "../stuff/useScreenSize";
+import EmergeMaterial from "../stuff/EmergeMaterial";
 
 const PIXELS = [
   1, 1.5, 2, 2.5, 3, 1, 1.5, 2, 2.5, 3, 3.5, 4, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5,
@@ -22,6 +20,24 @@ export default function EmergingImage({ type, url, ...props }) {
   const [isIntersecting, setIsIntersecting] = useState(false);
   const timeRef = useRef(0);
 
+  const progress = useMotionValue(0);
+  const smoothProgress = useSpring(progress, {
+    // damping: 20,
+    // stiffness: 100,
+    duration: 1000,
+    delay: 100,
+  });
+
+  useEffect(() => {
+    if (isIntersecting) {
+      setTimeout(() => {
+        progress.set(1);
+      }, 500); // 0.5秒の遅延
+    } else {
+      progress.set(0);
+    }
+  }, [isIntersecting, progress]);
+
   useEffect(() => {
     new THREE.TextureLoader().loadAsync(url).then((data) => {
       setTextureSize([data.source.data.width, data.source.data.height]);
@@ -31,20 +47,24 @@ export default function EmergingImage({ type, url, ...props }) {
 
   useEffect(() => {
     if (refMesh) {
-      refMesh.material.uProgress = 0;
       refMesh.material.uType = type;
     }
   }, [type, refMesh]);
 
-  useGSAP(() => {
-    if (refMesh?.material) {
-      gsap.to(refMesh.material, {
-        uProgress: isIntersecting ? 1 : 0,
-        duration: 1.5,
-        ease: "none",
+  useEffect(() => {
+    if (refMesh) {
+      const material = new EmergeMaterial({
+        uTime: 0,
+        uFillColor: new THREE.Color("#403fb7"),
+        transparent: true,
+        uTexture: texture,
+        uPixels: PIXELS,
+        uTextureSize: new THREE.Vector2(textureSize[0], textureSize[1]),
+        uElementSize: new THREE.Vector2(elementSize[0], elementSize[1]),
       });
+      refMesh.material = material;
     }
-  }, [isIntersecting, type, refMesh]);
+  }, [refMesh, texture, textureSize, elementSize]);
 
   useEffect(() => {
     let animationFrameId;
@@ -52,6 +72,7 @@ export default function EmergingImage({ type, url, ...props }) {
       if (refMesh?.material) {
         timeRef.current += 0.016; // Approximately 60 FPS
         refMesh.material.uTime = timeRef.current;
+        refMesh.material.uProgress = smoothProgress.get();
       }
       animationFrameId = requestAnimationFrame(animate);
     };
@@ -59,9 +80,9 @@ export default function EmergingImage({ type, url, ...props }) {
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [refMesh]);
+  }, [refMesh, smoothProgress]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (refMesh) {
       let bounds = ref.current.getBoundingClientRect();
       setElementSize([bounds.width, bounds.height]);
@@ -81,18 +102,10 @@ export default function EmergingImage({ type, url, ...props }) {
 
   return (
     <View {...props} ref={ref}>
-      <mesh ref={setRefMesh}>
-        <emergeMaterial
-          uTime={0}
-          uFillColor={new THREE.Color("#403fb7")}
-          transparent={true}
-          uTexture={texture}
-          uPixels={PIXELS}
-          uTextureSize={new THREE.Vector2(textureSize[0], textureSize[1])}
-          uElementSize={new THREE.Vector2(elementSize[0], elementSize[1])}
-        />
+      <motion.mesh ref={setRefMesh}>
+        <meshStandardMaterial />
         <planeGeometry args={[1, 1]} />
-      </mesh>
+      </motion.mesh>
     </View>
   );
 }
