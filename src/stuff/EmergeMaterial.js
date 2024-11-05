@@ -210,6 +210,99 @@ const EmergeMaterial = shaderMaterial(
         float brightness = smoothstep(0.3, 0.7, auroraEffect);
         gl_FragColor.rgb += brightness * 0.3;
       }
+      else if(uType==1.){
+        float hash = hashwithoutsine12(vUv*1000. + floor(uTime*3.)*0.1);
+        float hash1 = hashwithoutsine12(vUv*1000. + 10. + floor(uTime*3.)*0.1);
+        float hash2 = hashwithoutsine12(vUv*1000. + 20. + floor(uTime*3.)*0.1);
+        vec3 fillColor = uFillColor;
+        fillColor +=  (vec3(hash)-vec3(0.5))*0.2;
+
+        float n = (cnoise(vUv*vec2(35.,1.)) + 1.)*0.5;
+        float border = 1.;
+
+        float dt = parabola( cubicInOut(uProgress),1.);
+        vec2 distUV = uv;
+        distUV.y = 1.-(1.-uv.y)*(1. -dt*0.3) ;
+        defaultColor = texture2D(uTexture, distUV);
+        float width = 1.;
+        float w = width*dt;
+
+        float maskvalue = smoothstep(1. - w,1.,vUv.y + mix(-w/2., 1. - w/2., cubicInOut(uProgress)));
+        float maskvalue0 = smoothstep(1.,1.,vUv.y + cubicInOut(uProgress));
+
+        float mask = maskvalue + maskvalue*n;
+
+        float final = smoothstep(1.,1.+0.01,mask);
+        float dist = -0.5;
+        float final1 = smoothstep(1.,1.+0.01,mask-dist);
+        if(final1==0.) discard;
+
+        vec3 finalColor = mix(fillColor,defaultColor.rgb,final);
+        gl_FragColor = vec4(finalColor,1.);
+      }
+      else if(uType==2.){
+        float s = 120.;
+
+        vec2 gridSize = vec2(
+          s,
+          floor(s/uAspect)
+        );
+
+        vec2 newUV = floor(vUv * gridSize);
+
+        float x = floor(vUv.x * 10.);
+        float y = floor(vUv.y * 10.);
+        float pattern = hashwithoutsine12(newUV);
+
+        float w = 0.5;
+        float p0 = (clamp( (uProgress - 0.2*0.)/0.8,0.,1.));
+        float p1 = (clamp( (uProgress - 0.2*1.)/0.8,0.,1.));
+
+        p0  = map(p0, 0., 1., -w,  1.);
+        p0 = smoothstep(p0,p0+w,1.-vUv.y);
+        float p0_ = clamp(1. - 2.*p0 +pattern,0.,1.);
+
+        p1  = map(p1, 0., 1., -w,  1.);
+        p1 = smoothstep(p1,p1+w,1.-vUv.y);
+        float p1_ = clamp(1. - 2.*p1 +pattern,0.,1.);
+
+        vec3 finalColor = mix( uFillColor,defaultColor.rgb,p1_);
+
+        gl_FragColor = vec4(finalColor,p0_);
+      }
+      else if(uType==3.){
+        float progress = quadraticInOut(1.-uProgress);
+        float s = 50.;
+        vec2 gridSize = vec2(
+          s,
+          floor(s/imageAspect)
+        );
+
+        float v = smoothstep(0.0, 1.0, vUv.y + sin(vUv.x*4.0+progress*6.0) * mix(0.3, 0.1,
+        abs(0.5-vUv.x)) * 0.5 * smoothstep(0.0, 0.2, progress) + (1.0 - progress * 2.0));
+
+        float mixnewUV =(vUv.x * 3. + (1.0-v) * 50.0)*progress;
+        vec2 subUv = mix(uv, floor(uv * gridSize) / gridSize, mixnewUV);
+
+        vec4 color = texture2D(uTexture, subUv);
+        color.a =  mix(1.0, pow(v, 5.0) , step(0.0, progress));
+        color.a = pow(v, 1.0);
+        color.rgb = mix(color.rgb, uFillColor, smoothstep(0.5, 0.0, abs(0.5-color.a)) * progress);
+
+        gl_FragColor = color;
+      }
+      else if(uType==4.){
+        int indexProgress = int(uProgress*36.);
+        float pixellation = floor(uElementSize.x*uPixels[indexProgress]);
+
+        vec2 gridSize = vec2(
+          pixellation,
+          floor(pixellation/imageAspect)
+        );
+        vec2 newUV = floor(uv * gridSize) / gridSize + 0.5/vec2(gridSize);
+        vec4 color = texture2D(uTexture, newUV);
+        gl_FragColor = color;
+      }
       else {
         gl_FragColor = defaultColor;
       }

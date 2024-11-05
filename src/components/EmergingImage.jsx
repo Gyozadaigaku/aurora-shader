@@ -5,14 +5,14 @@ import { useGSAP } from "@gsap/react";
 import { useLayoutEffect } from "react";
 import * as THREE from "three";
 import useScreenSize from "../stuff/useScreenSize";
-import { OrbitControls, View } from "@react-three/drei";
+import { View } from "@react-three/drei";
 
 const PIXELS = [
   1, 1.5, 2, 2.5, 3, 1, 1.5, 2, 2.5, 3, 3.5, 4, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5,
   6, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 20, 100,
 ].map((v) => v / 100);
 
-export default function EmergingImage({ ...props }) {
+export default function EmergingImage({ type, url, ...props }) {
   const [refMesh, setRefMesh] = useState(null);
   const [texture, setTexture] = useState(null);
   const [textureSize, setTextureSize] = useState([0, 0]);
@@ -20,21 +20,21 @@ export default function EmergingImage({ ...props }) {
   const ref = useRef();
   const screenSize = useScreenSize();
   const [isIntersecting, setIsIntersecting] = useState(false);
+  const timeRef = useRef(0);
 
   useEffect(() => {
-    new THREE.TextureLoader().loadAsync(props.url).then((data) => {
-      // data.colorSpace = THREE.LinearSRGBColorSpace;
+    new THREE.TextureLoader().loadAsync(url).then((data) => {
       setTextureSize([data.source.data.width, data.source.data.height]);
       setTexture(data);
     });
-  }, []);
+  }, [url]);
 
   useEffect(() => {
     if (refMesh) {
       refMesh.material.uProgress = 0;
-      refMesh.material.uType = props.type;
+      refMesh.material.uType = type;
     }
-  }, [props.type]);
+  }, [type, refMesh]);
 
   useGSAP(() => {
     if (refMesh?.material) {
@@ -44,11 +44,23 @@ export default function EmergingImage({ ...props }) {
         ease: "none",
       });
     }
-  }, [isIntersecting, props.type]);
+  }, [isIntersecting, type, refMesh]);
 
-  // scroll check
-  // only set intersecting if refMesh is available, important
-  // Thanks Cody Bennett for this issue!
+  useEffect(() => {
+    let animationFrameId;
+    const animate = () => {
+      if (refMesh?.material) {
+        timeRef.current += 0.016; // Approximately 60 FPS
+        refMesh.material.uTime = timeRef.current;
+      }
+      animationFrameId = requestAnimationFrame(animate);
+    };
+    animate();
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [refMesh]);
+
   useLayoutEffect(() => {
     if (refMesh) {
       let bounds = ref.current.getBoundingClientRect();
@@ -61,17 +73,17 @@ export default function EmergingImage({ ...props }) {
     }
   }, [refMesh]);
 
-  // resize
   useEffect(() => {
     let bounds = ref.current.getBoundingClientRect();
     setElementSize([bounds.width, bounds.height]);
     refMesh?.scale.set(bounds.width, bounds.height, 1);
-  }, [screenSize]);
+  }, [screenSize, refMesh]);
 
   return (
     <View {...props} ref={ref}>
       <mesh ref={setRefMesh}>
         <emergeMaterial
+          uTime={0}
           uFillColor={new THREE.Color("#403fb7")}
           transparent={true}
           uTexture={texture}
